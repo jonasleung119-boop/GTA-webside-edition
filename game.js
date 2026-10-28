@@ -1,8 +1,8 @@
 // GTA Web Edition - Main Game File
 
 // Game Constants
-const GAME_WIDTH = 800;
-const GAME_HEIGHT = 600;
+const GAME_WIDTH = 1200;
+const GAME_HEIGHT = 800;
 const TILE_SIZE = 40;
 const GRAVITY = 0.5;
 const FRICTION = 0.98;
@@ -39,39 +39,347 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// World Map (Simple grid-based city)
+// World Map - GTA-style large city
 const worldMap = {
-    width: 100,
-    height: 100,
+    width: 200,
+    height: 200,
     tiles: []
 };
 
-// Initialize world with roads and buildings
+// District definitions for GTA-style city
+const DISTRICTS = {
+    DOWNTOWN: { x: 70, y: 70, width: 60, height: 60 },
+    RESIDENTIAL: { x: 0, y: 0, width: 70, height: 70 },
+    INDUSTRIAL: { x: 0, y: 130, width: 70, height: 70 },
+    BEACH: { x: 130, y: 0, width: 70, height: 70 },
+    AIRPORT: { x: 130, y: 130, width: 70, height: 70 }
+};
+
+// Initialize world with GTA-style layout
 function initWorld() {
+    // First, create base layer
     for (let y = 0; y < worldMap.height; y++) {
         worldMap.tiles[y] = [];
         for (let x = 0; x < worldMap.width; x++) {
-            // Create a simple road pattern
-            if (x % 5 === 0 || y % 5 === 0) {
-                worldMap.tiles[y][x] = { type: 'road', color: '#333' };
-            } else if (Math.random() > 0.7) {
-                worldMap.tiles[y][x] = { type: 'building', color: '#555', height: Math.floor(Math.random() * 3) + 1 };
-            } else {
-                worldMap.tiles[y][x] = { type: 'grass', color: '#228B22' };
+            worldMap.tiles[y][x] = { type: 'grass', color: '#228B22' };
+        }
+    }
+    
+    // Create districts
+    createDowntown();
+    createResidential();
+    createIndustrial();
+    createBeach();
+    createAirport();
+    
+    // Create highway system
+    createHighways();
+    
+    // Add special locations
+    addSpecialLocations();
+}
+
+// Create Downtown District
+function createDowntown() {
+    const d = DISTRICTS.DOWNTOWN;
+    
+    // Create grid of roads
+    for (let y = d.y; y < d.y + d.height; y++) {
+        for (let x = d.x; x < d.x + d.width; x++) {
+            // Main avenues (every 8 tiles)
+            if (x % 8 === 0 || y % 8 === 0) {
+                worldMap.tiles[y][x] = { type: 'road', color: '#444', roadType: 'avenue' };
+            }
+            // Side streets (every 4 tiles, but not on avenues)
+            else if (x % 4 === 0 || y % 4 === 0) {
+                worldMap.tiles[y][x] = { type: 'road', color: '#555', roadType: 'street' };
+            }
+            // Building blocks
+            else if (Math.random() > 0.2) {
+                const height = Math.floor(Math.random() * 5) + 2; // 2-6 stories
+                const color = ['#666', '#777', '#888', '#999'][Math.floor(Math.random() * 4)];
+                worldMap.tiles[y][x] = { type: 'building', color: color, height: height };
             }
         }
     }
     
-    // Add some special buildings
-    worldMap.tiles[50][50] = { type: 'police', color: '#1E90FF', height: 2 };
-    worldMap.tiles[45][45] = { type: 'hospital', color: '#FF6B6B', height: 2 };
-    worldMap.tiles[55][55] = { type: 'store', color: '#32CD32', height: 1 };
+    // Add central park area
+    for (let y = d.y + 25; y < d.y + 35; y++) {
+        for (let x = d.x + 25; x < d.x + 35; x++) {
+            if ((x - d.x - 25) % 2 === 0 || (y - d.y - 25) % 2 === 0) {
+                worldMap.tiles[y][x] = { type: 'path', color: '#8B4513' };
+            } else {
+                worldMap.tiles[y][x] = { type: 'park', color: '#228B22' };
+            }
+        }
+    }
+}
+
+// Create Residential District
+function createResidential() {
+    const d = DISTRICTS.RESIDENTIAL;
+    
+    for (let y = d.y; y < d.y + d.height; y++) {
+        for (let x = d.x; x < d.x + d.width; x++) {
+            // Curving roads pattern
+            const distFromCenterX = Math.abs(x - (d.x + d.width / 2));
+            const distFromCenterY = Math.abs(y - (d.y + d.height / 2));
+            
+            // Main roads
+            if ((x - d.x) % 10 === 0 || (y - d.y) % 10 === 0) {
+                worldMap.tiles[y][x] = { type: 'road', color: '#666', roadType: 'residential' };
+            }
+            // Houses and apartments
+            else if (Math.random() > 0.4) {
+                const height = Math.random() > 0.5 ? 1 : 2;
+                const color = ['#A0522D', '#CD853F', '#DEB887', '#F5DEB3'][Math.floor(Math.random() * 4)];
+                worldMap.tiles[y][x] = { type: 'building', color: color, height: height };
+            }
+            // Gardens and trees
+            else if (Math.random() > 0.5) {
+                worldMap.tiles[y][x] = { type: 'garden', color: '#90EE90' };
+            }
+        }
+    }
+    
+    // Add a residential park
+    for (let y = d.y + 10; y < d.y + 20; y++) {
+        for (let x = d.x + 10; x < d.x + 20; x++) {
+            if (Math.random() > 0.1) {
+                worldMap.tiles[y][x] = { type: 'park', color: '#228B22' };
+            }
+        }
+    }
+}
+
+// Create Industrial District
+function createIndustrial() {
+    const d = DISTRICTS.INDUSTRIAL;
+    
+    for (let y = d.y; y < d.y + d.height; y++) {
+        for (let x = d.x; x < d.x + d.width; x++) {
+            // Wide roads for trucks
+            if ((x - d.x) % 12 === 0 || (y - d.y) % 12 === 0) {
+                worldMap.tiles[y][x] = { type: 'road', color: '#333', roadType: 'industrial' };
+                // Make roads wider
+                if ((x - d.x) % 12 === 1 || (y - d.y) % 12 === 1) {
+                    worldMap.tiles[y][x] = { type: 'road', color: '#333', roadType: 'industrial' };
+                }
+            }
+            // Factories and warehouses
+            else if (Math.random() > 0.3) {
+                const height = Math.floor(Math.random() * 3) + 1;
+                const color = ['#8B0000', '#A52A2A', '#B22222', '#800000'][Math.floor(Math.random() * 4)];
+                worldMap.tiles[y][x] = { type: 'building', color: color, height: height };
+            }
+            // Docks area (bottom part)
+            else if (y > d.y + d.height - 15) {
+                if (Math.random() > 0.7) {
+                    worldMap.tiles[y][x] = { type: 'dock', color: '#8B4513' };
+                } else {
+                    worldMap.tiles[y][x] = { type: 'water', color: '#1E90FF' };
+                }
+            }
+        }
+    }
+    
+    // Add shipping containers area
+    for (let y = d.y + 5; y < d.y + 15; y++) {
+        for (let x = d.x + 50; x < d.x + 60; x++) {
+            if (Math.random() > 0.3) {
+                worldMap.tiles[y][x] = { type: 'container', color: '#FF4500', height: 1 };
+            }
+        }
+    }
+}
+
+// Create Beach District
+function createBeach() {
+    const d = DISTRICTS.BEACH;
+    
+    // Beach area (top 30 rows)
+    for (let y = d.y; y < d.y + 30; y++) {
+        for (let x = d.x; x < d.x + d.width; x++) {
+            if (Math.random() > 0.2) {
+                worldMap.tiles[y][x] = { type: 'sand', color: '#F5DEB3' };
+            } else {
+                worldMap.tiles[y][x] = { type: 'water', color: '#1E90FF' };
+            }
+        }
+    }
+    
+    // Beachfront buildings
+    for (let y = d.y + 30; y < d.y + 40; y++) {
+        for (let x = d.x; x < d.x + d.width; x++) {
+            if ((x - d.x) % 8 === 0 || (y - d.y - 30) % 5 === 0) {
+                worldMap.tiles[y][x] = { type: 'road', color: '#777', roadType: 'beach' };
+            } else if (Math.random() > 0.5) {
+                const height = Math.random() > 0.7 ? 3 : Math.random() > 0.5 ? 2 : 1;
+                worldMap.tiles[y][x] = { type: 'building', color: '#FFD700', height: height };
+            } else {
+                worldMap.tiles[y][x] = { type: 'sand', color: '#F5DEB3' };
+            }
+        }
+    }
+    
+    // Rest of beach district (residential/commercial)
+    for (let y = d.y + 40; y < d.y + d.height; y++) {
+        for (let x = d.x; x < d.x + d.width; x++) {
+            if ((x - d.x) % 6 === 0 || (y - d.y) % 6 === 0) {
+                worldMap.tiles[y][x] = { type: 'road', color: '#666', roadType: 'beach' };
+            } else if (Math.random() > 0.4) {
+                const height = Math.floor(Math.random() * 3) + 1;
+                const color = ['#FFD700', '#FFA500', '#FF8C00'][Math.floor(Math.random() * 3)];
+                worldMap.tiles[y][x] = { type: 'building', color: color, height: height };
+            }
+        }
+    }
+}
+
+// Create Airport District
+function createAirport() {
+    const d = DISTRICTS.AIRPORT;
+    
+    // Runways (horizontal and vertical)
+    for (let y = d.y + 10; y < d.y + 20; y++) {
+        for (let x = d.x; x < d.x + d.width; x++) {
+            worldMap.tiles[y][x] = { type: 'runway', color: '#A9A9A9' };
+        }
+    }
+    for (let y = d.y; y < d.y + d.height; y++) {
+        for (let x = d.x + 30; x < d.x + 40; x++) {
+            worldMap.tiles[y][x] = { type: 'runway', color: '#A9A9A9' };
+        }
+    }
+    
+    // Terminal area
+    for (let y = d.y + 20; y < d.y + 50; y++) {
+        for (let x = d.x + 10; x < d.x + 60; x++) {
+            if ((x - d.x - 10) % 3 === 0 || (y - d.y - 20) % 3 === 0) {
+                worldMap.tiles[y][x] = { type: 'road', color: '#888', roadType: 'airport' };
+            } else if (Math.random() > 0.3) {
+                const height = Math.random() > 0.5 ? 2 : 1;
+                worldMap.tiles[y][x] = { type: 'building', color: '#C0C0C0', height: height };
+            }
+        }
+    }
+    
+    // Hangars
+    for (let y = d.y + 50; y < d.y + 60; y++) {
+        for (let x = d.x; x < d.x + 30; x++) {
+            if (Math.random() > 0.2) {
+                worldMap.tiles[y][x] = { type: 'building', color: '#708090', height: 3 };
+            }
+        }
+    }
+    for (let y = d.y + 50; y < d.y + 60; y++) {
+        for (let x = d.x + 40; x < d.x + 70; x++) {
+            if (Math.random() > 0.2) {
+                worldMap.tiles[y][x] = { type: 'building', color: '#708090', height: 3 };
+            }
+        }
+    }
+}
+
+// Create Highway System
+function createHighways() {
+    // Horizontal highway through middle
+    for (let x = 0; x < worldMap.width; x++) {
+        for (let h = 0; h < 4; h++) {
+            if (x % 20 === 0 || x % 20 === 1 || x % 20 === 2 || x % 20 === 3) {
+                worldMap.tiles[100 - h][x] = { type: 'highway', color: '#222', roadType: 'highway' };
+            }
+        }
+    }
+    
+    // Vertical highway
+    for (let y = 0; y < worldMap.height; y++) {
+        for (let w = 0; w < 4; w++) {
+            if (y % 20 === 0 || y % 20 === 1 || y % 20 === 2 || y % 20 === 3) {
+                worldMap.tiles[y][100 + w] = { type: 'highway', color: '#222', roadType: 'highway' };
+            }
+        }
+    }
+    
+    // Diagonal highway (top-left to bottom-right)
+    for (let i = 0; i < 140; i++) {
+        const x = 20 + i;
+        const y = 20 + i;
+        if (x < worldMap.width && y < worldMap.height) {
+            worldMap.tiles[y][x] = { type: 'highway', color: '#222', roadType: 'highway' };
+        }
+    }
+    
+    // Connect highways to districts
+    connectHighways();
+}
+
+// Connect highways to district roads
+function connectHighways() {
+    // Connect to Downtown
+    for (let x = 70; x < 130; x++) {
+        if (worldMap.tiles[99][x].type === 'highway') {
+            worldMap.tiles[100][x] = { type: 'road', color: '#444', roadType: 'avenue' };
+            worldMap.tiles[101][x] = { type: 'road', color: '#444', roadType: 'avenue' };
+        }
+    }
+    
+    // Connect to other districts
+    for (let y = 0; y < 70; y++) {
+        if (worldMap.tiles[y][99].type === 'highway') {
+            worldMap.tiles[y][100] = { type: 'road', color: '#666', roadType: 'residential' };
+            worldMap.tiles[y][101] = { type: 'road', color: '#666', roadType: 'residential' };
+        }
+    }
+}
+
+// Add Special Locations
+function addSpecialLocations() {
+    // Police stations (multiple)
+    addBuilding(50, 50, 5, 5, 'police', '#1E90FF');
+    addBuilding(150, 150, 4, 4, 'police', '#1E90FF');
+    
+    // Hospitals
+    addBuilding(60, 60, 6, 4, 'hospital', '#FF6B6B');
+    addBuilding(140, 50, 5, 4, 'hospital', '#FF6B6B');
+    
+    // Stores and shops
+    addBuilding(55, 55, 3, 3, 'store', '#32CD32');
+    addBuilding(120, 80, 3, 3, 'store', '#32CD32');
+    addBuilding(80, 120, 3, 3, 'store', '#32CD32');
+    
+    // Gang territories
+    addBuilding(10, 10, 4, 4, 'gang', '#8B0000');
+    addBuilding(180, 180, 4, 4, 'gang', '#006400');
+    
+    // Stadium
+    addBuilding(120, 120, 8, 6, 'stadium', '#808080');
+    
+    // Bank
+    addBuilding(90, 90, 4, 4, 'bank', '#FFD700');
+    
+    // Ammunation
+    addBuilding(75, 75, 2, 2, 'ammunation', '#FF4500');
+    
+    // Fast food
+    addBuilding(110, 60, 2, 2, 'fastfood', '#FF6347');
+}
+
+// Helper to add a building
+function addBuilding(startX, startY, width, height, type, color) {
+    for (let y = startY; y < startY + height; y++) {
+        for (let x = startX; x < startX + width; x++) {
+            if (x >= 0 && x < worldMap.width && y >= 0 && y < worldMap.height) {
+                worldMap.tiles[y][x] = { type: type, color: color, height: Math.min(height, 5) };
+            }
+        }
+    }
 }
 
 // Player Object
 const player = {
-    x: 50 * TILE_SIZE,
-    y: 50 * TILE_SIZE,
+    x: 100 * TILE_SIZE,
+    y: 100 * TILE_SIZE,
     width: 30,
     height: 50,
     speed: 0,
@@ -89,48 +397,83 @@ const player = {
 const vehicles = [];
 
 function spawnVehicles() {
-    // Spawn some random vehicles
-    for (let i = 0; i < 20; i++) {
-        const x = Math.random() * worldMap.width * TILE_SIZE;
-        const y = Math.random() * worldMap.height * TILE_SIZE;
-        const type = ['car', 'truck', 'motorcycle'][Math.floor(Math.random() * 3)];
+    // Spawn vehicles on roads only
+    const vehicleTypes = ['car', 'car', 'car', 'car', 'truck', 'motorcycle', 'police', 'taxi', 'bus'];
+    const spawnCount = 200;
+    
+    for (let i = 0; i < spawnCount; i++) {
+        let x, y, attempts = 0;
+        const maxAttempts = 100;
+        
+        do {
+            x = Math.floor(Math.random() * worldMap.width);
+            y = Math.floor(Math.random() * worldMap.height);
+            attempts++;
+            
+            if (attempts > maxAttempts) {
+                x = Math.floor(Math.random() * worldMap.width);
+                y = Math.floor(Math.random() * worldMap.height);
+                break;
+            }
+        } while (worldMap.tiles[y] && worldMap.tiles[y][x] && 
+                 worldMap.tiles[y][x].type !== 'road' && 
+                 worldMap.tiles[y][x].type !== 'highway' &&
+                 worldMap.tiles[y][x].type !== 'avenue');
+        
+        const type = vehicleTypes[Math.floor(Math.random() * vehicleTypes.length)];
         
         vehicles.push({
-            x: x,
-            y: y,
-            width: type === 'truck' ? 80 : type === 'motorcycle' ? 30 : 50,
-            height: type === 'truck' ? 100 : type === 'motorcycle' ? 40 : 60,
-            speed: Math.random() * 2 + 1,
+            x: x * TILE_SIZE + TILE_SIZE / 2,
+            y: y * TILE_SIZE + TILE_SIZE / 2,
+            width: type === 'truck' || type === 'bus' ? 80 : type === 'motorcycle' ? 30 : 50,
+            height: type === 'truck' || type === 'bus' ? 100 : type === 'motorcycle' ? 40 : 60,
+            speed: type === 'police' ? 3 : type === 'bus' ? 1.5 : Math.random() * 2 + 1,
             direction: Math.random() * Math.PI * 2,
             type: type,
             color: getVehicleColor(type),
             velocity: { x: 0, y: 0 },
             targetDirection: null,
-            aiState: 'driving'
+            aiState: 'driving',
+            siren: type === 'police'
         });
     }
 }
 
 function getVehicleColor(type) {
     const colors = {
-        car: ['#FF0000', '#0000FF', '#FFFF00', '#00FF00', '#FF00FF'],
-        truck: ['#8B4513', '#556B2F', '#696969'],
-        motorcycle: ['#000000', '#808080', '#A9A9A9']
+        car: ['#FF0000', '#0000FF', '#FFFF00', '#00FF00', '#FF00FF', '#800080', '#FFA500'],
+        truck: ['#8B4513', '#556B2F', '#696969', '#2F4F4F'],
+        motorcycle: ['#000000', '#808080', '#A9A9A9', '#4B0082'],
+        police: ['#FFFFFF', '#0000FF'],
+        taxi: ['#FFFF00'],
+        bus: ['#FF0000', '#00FF00']
     };
-    return colors[type][Math.floor(Math.random() * colors[type].length)];
+    return colors[type] ? colors[type][Math.floor(Math.random() * colors[type].length)] : '#FFFFFF';
 }
 
 // NPCs (Pedestrians)
 const npcs = [];
 
 function spawnNPCs() {
-    for (let i = 0; i < 50; i++) {
-        const x = Math.random() * worldMap.width * TILE_SIZE;
-        const y = Math.random() * worldMap.height * TILE_SIZE;
+    for (let i = 0; i < 100; i++) {
+        let x, y, attempts = 0;
+        const maxAttempts = 50;
+        
+        // Try to spawn on sidewalk (next to roads)
+        do {
+            x = Math.floor(Math.random() * worldMap.width);
+            y = Math.floor(Math.random() * worldMap.height);
+            attempts++;
+            
+            if (attempts > maxAttempts) break;
+        } while (worldMap.tiles[y] && worldMap.tiles[y][x] && 
+                 worldMap.tiles[y][x].type === 'building' ||
+                 worldMap.tiles[y][x].type === 'water' ||
+                 worldMap.tiles[y][x].type === 'highway');
         
         npcs.push({
-            x: x,
-            y: y,
+            x: x * TILE_SIZE + TILE_SIZE / 2,
+            y: y * TILE_SIZE + TILE_SIZE / 2,
             width: 20,
             height: 40,
             speed: Math.random() * 1 + 0.5,
@@ -146,9 +489,12 @@ function spawnNPCs() {
 
 // Camera System
 function updateCamera() {
-    // Center camera on player
-    gameState.camera.x = player.x - canvas.width / 2;
-    gameState.camera.y = player.y - canvas.height / 2;
+    // Center camera on player with smoothing
+    const targetX = player.x - canvas.width / 2;
+    const targetY = player.y - canvas.height / 2;
+    
+    gameState.camera.x += (targetX - gameState.camera.x) * 0.1;
+    gameState.camera.y += (targetY - gameState.camera.y) * 0.1;
     
     // Clamp camera to world bounds
     gameState.camera.x = Math.max(0, Math.min(worldMap.width * TILE_SIZE - canvas.width, gameState.camera.x));
@@ -224,8 +570,8 @@ function initGame() {
     spawnNPCs();
     
     // Reset player position
-    player.x = 50 * TILE_SIZE;
-    player.y = 50 * TILE_SIZE;
+    player.x = 100 * TILE_SIZE;
+    player.y = 100 * TILE_SIZE;
     player.velocity.x = 0;
     player.velocity.y = 0;
     
@@ -380,18 +726,16 @@ function updatePlayer(deltaTime) {
     // Shooting
     if (gameState.mouse.pressed && !gameState.inVehicle) {
         shoot();
-        gameState.mouse.pressed = false; // Prevent continuous shooting
+        gameState.mouse.pressed = false;
     }
     
     // Vehicle entry/exit
     if (gameState.keys['KeyE']) {
         if (gameState.inVehicle) {
-            // Exit vehicle
             gameState.inVehicle = false;
             gameState.currentVehicle = null;
             document.getElementById('vehicle-hud').classList.add('hidden');
         } else {
-            // Try to enter nearest vehicle
             let nearestVehicle = null;
             let nearestDistance = 100;
             
@@ -413,7 +757,7 @@ function updatePlayer(deltaTime) {
             }
         }
         
-        gameState.keys['KeyE'] = false; // Prevent continuous triggering
+        gameState.keys['KeyE'] = false;
     }
     
     // Update animation
@@ -435,7 +779,6 @@ function shoot() {
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance < 40) {
-                // Hit NPC
                 npcs.splice(i, 1);
                 gameState.money += 10;
                 if (gameState.wantedLevel < 5) gameState.wantedLevel++;
@@ -479,7 +822,7 @@ const bullets = [];
 // Update Vehicles
 function updateVehicles(deltaTime) {
     for (const vehicle of vehicles) {
-        if (vehicle === gameState.currentVehicle) continue; // Skip player's vehicle
+        if (vehicle === gameState.currentVehicle) continue;
         
         // Simple AI: drive randomly
         if (!vehicle.targetDirection || Math.random() < 0.01) {
@@ -494,7 +837,7 @@ function updateVehicles(deltaTime) {
         vehicle.x += Math.cos(vehicle.direction) * vehicle.speed * deltaTime * 60;
         vehicle.y += Math.sin(vehicle.direction) * vehicle.speed * deltaTime * 60;
         
-        // Wrap around world (or clamp)
+        // Wrap around world
         vehicle.x = Math.max(0, Math.min(worldMap.width * TILE_SIZE - vehicle.width, vehicle.x));
         vehicle.y = Math.max(0, Math.min(worldMap.height * TILE_SIZE - vehicle.height, vehicle.y));
     }
@@ -537,8 +880,7 @@ function checkCollisions() {
     if (playerTileX >= 0 && playerTileX < worldMap.width && 
         playerTileY >= 0 && playerTileY < worldMap.height) {
         const tile = worldMap.tiles[playerTileY][playerTileX];
-        if (tile.type === 'building') {
-            // Collision with building - push player out
+        if (tile.type === 'building' || tile.type === 'container') {
             const overlapX = (player.x % TILE_SIZE) - TILE_SIZE / 2;
             const overlapY = (player.y % TILE_SIZE) - TILE_SIZE / 2;
             
@@ -547,6 +889,14 @@ function checkCollisions() {
             } else {
                 player.y += Math.sign(overlapY) * 2;
             }
+        }
+        
+        // Water collision
+        if (tile.type === 'water') {
+            player.x -= player.velocity.x * 0.5;
+            player.y -= player.velocity.y * 0.5;
+            player.velocity.x *= 0.8;
+            player.velocity.y *= 0.8;
         }
     }
     
@@ -557,7 +907,6 @@ function checkCollisions() {
         for (let j = 0; j < npcs.length; j++) {
             const npc = npcs[j];
             if (checkRectCollision(bullet, npc)) {
-                // Hit!
                 npcs.splice(j, 1);
                 bullets.splice(i, 1);
                 gameState.money += 20;
@@ -579,7 +928,6 @@ function checkCollisions() {
     if (!gameState.inVehicle) {
         for (const vehicle of vehicles) {
             if (checkRectCollision(player, vehicle)) {
-                // Push player out of vehicle
                 const dx = player.x - (vehicle.x + vehicle.width / 2);
                 const dy = player.y - (vehicle.y + vehicle.height / 2);
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -599,7 +947,6 @@ function checkCollisions() {
             const v2 = vehicles[j];
             
             if (checkRectCollision(v1, v2)) {
-                // Simple collision response
                 const dx = v1.x - v2.x;
                 const dy = v1.y - v2.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -696,7 +1043,7 @@ function drawWorld() {
                 ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 
                 // Draw building height indicator
-                if (tile.type === 'building' && tile.height > 1) {
+                if ((tile.type === 'building' || tile.type === 'container') && tile.height > 1) {
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
                     for (let h = 1; h < tile.height; h++) {
                         ctx.fillRect(
@@ -706,6 +1053,29 @@ function drawWorld() {
                             20
                         );
                     }
+                }
+                
+                // Draw road markings for highways
+                if (tile.type === 'highway') {
+                    ctx.strokeStyle = '#FFF';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x * TILE_SIZE + 10, y * TILE_SIZE + 20);
+                    ctx.lineTo(x * TILE_SIZE + 30, y * TILE_SIZE + 20);
+                    ctx.stroke();
+                }
+                
+                // Draw water waves
+                if (tile.type === 'water') {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x * TILE_SIZE, y * TILE_SIZE + 10);
+                    ctx.quadraticCurveTo(
+                        x * TILE_SIZE + 20, y * TILE_SIZE + 5,
+                        x * TILE_SIZE + 40, y * TILE_SIZE + 10
+                    );
+                    ctx.stroke();
                 }
             }
         }
@@ -723,19 +1093,36 @@ function drawVehicles() {
         
         if (vehicle.type === 'car') {
             ctx.fillRect(-vehicle.width / 2, -vehicle.height / 2, vehicle.width, vehicle.height);
-            // Draw windshield
             ctx.fillStyle = 'rgba(200, 200, 255, 0.3)';
             ctx.fillRect(-vehicle.width / 2 + 5, -vehicle.height / 2, vehicle.width - 10, 15);
         } else if (vehicle.type === 'truck') {
             ctx.fillRect(-vehicle.width / 2, -vehicle.height / 2, vehicle.width, vehicle.height);
-            // Draw trailer
             ctx.fillStyle = vehicle.color;
             ctx.fillRect(vehicle.width / 2, -vehicle.height / 2 + 10, vehicle.width / 2, vehicle.height - 20);
         } else if (vehicle.type === 'motorcycle') {
             ctx.fillRect(-vehicle.width / 2, -vehicle.height / 2, vehicle.width, vehicle.height);
-            // Draw rider
             ctx.fillStyle = '#000000';
             ctx.fillRect(-5, -vehicle.height / 2 - 10, 10, 20);
+        } else if (vehicle.type === 'police') {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(-vehicle.width / 2, -vehicle.height / 2, vehicle.width, vehicle.height);
+            ctx.fillStyle = '#0000FF';
+            ctx.fillRect(-vehicle.width / 2 + 5, -vehicle.height / 2 + 5, vehicle.width - 10, 10);
+            // Police lights
+            if (vehicle.siren) {
+                ctx.fillStyle = Math.sin(Date.now() / 100) > 0 ? '#FF0000' : '#0000FF';
+                ctx.fillRect(vehicle.width / 2 - 5, -vehicle.height / 2 - 5, 10, 5);
+            }
+        } else if (vehicle.type === 'taxi') {
+            ctx.fillStyle = '#FFFF00';
+            ctx.fillRect(-vehicle.width / 2, -vehicle.height / 2, vehicle.width, vehicle.height);
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(-vehicle.width / 2 + 5, -vehicle.height / 2 + 5, vehicle.width - 10, 5);
+        } else if (vehicle.type === 'bus') {
+            ctx.fillStyle = vehicle.color;
+            ctx.fillRect(-vehicle.width / 2, -vehicle.height / 2, vehicle.width, vehicle.height);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(-vehicle.width / 2 + 5, -vehicle.height / 2 + 5, vehicle.width - 10, 10);
         }
         
         ctx.restore();
@@ -752,7 +1139,6 @@ function drawNPCs() {
         ctx.fillStyle = npc.color;
         ctx.fillRect(-npc.width / 2, -npc.height / 2, npc.width, npc.height);
         
-        // Draw head
         ctx.fillStyle = '#FFD700';
         ctx.beginPath();
         ctx.arc(0, -npc.height / 2 - 5, 5, 0, Math.PI * 2);
