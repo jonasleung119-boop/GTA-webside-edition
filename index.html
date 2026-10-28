@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTA Web Edition</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="hud">
+            <div id="money">$<span id="money-amount">0</span></div>
+            <div id="wanted-level">Wanted: <span id="wanted-stars">0</span></div>
+            <div id="health">Health: <span id="health-bar"></span></div>
+            <div id="weapon">Weapon: <span id="weapon-name">Fists</span></div>
+            <div id="mission">Mission: <span id="mission-text">Free Roam</span></div>
+        </div>
+        <div id="menu" class="hidden">
+            <h1>GTA Web Edition</h1>
+            <button id="start-game">Start Game</button>
+            <button id="load-game">Load Game</button>
+            <button id="settings">Settings</button>
+        </div>
+        <div id="pause-menu" class="hidden">
+            <h1>Paused</h1>
+            <button id="resume">Resume</button>
+            <button id="save-game">Save Game</button>
+            <button id="quit">Quit to Menu</button>
+        </div>
+        <div id="vehicle-hud" class="hidden">
+            <div>Vehicle: <span id="vehicle-name">Unknown</span></div>
+            <div>Speed: <span id="vehicle-speed">0</span> km/h</div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
