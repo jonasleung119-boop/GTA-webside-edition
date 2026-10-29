@@ -41,8 +41,8 @@ resizeCanvas();
 
 // World Map - GTA-style large city
 const worldMap = {
-    width: 200,
-    height: 200,
+    width: 500,
+    height: 500,
     tiles: []
 };
 
