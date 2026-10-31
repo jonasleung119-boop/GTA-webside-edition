@@ -1,118 +1,460 @@
-body {
+/* style.css - Taipei GTA Cyberpunk Neon Aesthetics */
+
+* {
     margin: 0;
     padding: 0;
-    background: #000;
+    box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
     overflow: hidden;
-    font-family: Arial, sans-serif;
+    background-color: #0b0e14;
+    font-family: 'Chakra Petch', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #ffffff;
 }
 
 #game-container {
     position: relative;
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
 }
 
 #game-canvas {
-    background: #222;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 1;
+}
+
+/* --- Top-Left HUD (District & Tool buttons) --- */
+#top-left-hud {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.district-badge {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-left: 4px solid #00ffff;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00ffff;
+    box-shadow: 0 0 8px #00ffff;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    50% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+.quick-toolbar {
+    display: flex;
+    gap: 8px;
+}
+
+.hud-btn {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(6px);
+}
+
+.hud-btn:hover {
+    background: rgba(0, 255, 255, 0.25);
+    border-color: #00ffff;
+    transform: translateY(-2px);
+}
+
+/* --- Top-Right HUD (Wanted, Cash, Health) --- */
+#top-right-hud {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+#wanted-box {
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: #eab308;
+    text-shadow: 0 0 10px rgba(234, 179, 8, 0.8), 0 0 20px rgba(234, 179, 8, 0.4);
+}
+
+#cash-box {
+    font-size: 28px;
+    font-weight: 800;
+    color: #10b981;
+    text-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+    background: rgba(15, 23, 42, 0.85);
+    padding: 4px 14px;
+    border-radius: 4px;
+    border-right: 4px solid #10b981;
+}
+
+.currency {
+    color: #34d399;
+    font-size: 20px;
+    margin-right: 4px;
+}
+
+.bars-container {
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.stat-bar-wrap {
+    width: 100%;
+    height: 10px;
+    background: rgba(15, 23, 42, 0.8);
+    border-radius: 2px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.health .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+}
+
+.armor .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
+}
+
+/* --- Center Notification Banner --- */
+.notification-banner {
+    position: absolute;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid #00ffff;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #00ffff;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.notification-banner.fade-in {
+    opacity: 1;
+}
+
+.notification-banner.fade-out {
+    opacity: 0;
+}
+
+/* --- Bottom Left: Minimap Radar GPS --- */
+#minimap-container {
+    position: absolute;
+    bottom: 24px;
+    left: 24px;
+    z-index: 10;
+}
+
+.minimap-ring {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 3px solid #00ffff;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4), inset 0 0 15px rgba(0, 255, 255, 0.2);
+    overflow: hidden;
+    background: rgba(11, 14, 20, 0.9);
+}
+
+#minimap-canvas {
+    width: 100%;
+    height: 100%;
     display: block;
 }
 
-#hud {
+.compass-n {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    color: white;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ef4444;
+    font-size: 12px;
+    font-weight: 800;
+    text-shadow: 0 0 4px #ef4444;
+}
+
+/* --- Bottom Right: Speedometer --- */
+#vehicle-hud {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-right: 4px solid #f59e0b;
+    padding: 12px 20px;
+    border-radius: 6px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    transition: opacity 0.3s ease;
+}
+
+#vehicle-hud.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.speed-gauge {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.speed-number {
+    font-size: 48px;
+    font-weight: 800;
+    color: #f59e0b;
+    text-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+    line-height: 1;
+}
+
+.speed-unit {
     font-size: 16px;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 10px;
-    border-radius: 5px;
+    font-weight: 700;
+    color: #94a3b8;
 }
 
-#hud div {
-    margin: 5px 0;
+.vehicle-info {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #38bdf8;
+    margin-top: 4px;
 }
 
-#money-amount {
-    color: #4CAF50;
-    font-weight: bold;
+/* --- Mobile Touch Controls --- */
+#touch-controls {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
 }
 
-#wanted-stars {
-    color: #FF5722;
-    font-weight: bold;
+@media (max-width: 900px), (pointer: coarse) {
+    #touch-controls {
+        display: block;
+    }
+    #minimap-container {
+        bottom: 180px;
+        left: 15px;
+    }
+    .minimap-ring {
+        width: 120px;
+        height: 120px;
+    }
 }
 
-#health-bar {
-    display: inline-block;
-    width: 100px;
-    height: 20px;
-    background: #4CAF50;
-    border: 1px solid #fff;
+#virtual-joystick {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(30, 41, 59, 0.5);
+    border: 2px solid rgba(0, 255, 255, 0.4);
+    pointer-events: auto;
+    touch-action: none;
 }
 
-#menu, #pause-menu {
+#joystick-knob {
     position: absolute;
     top: 50%;
     left: 50%;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(0, 255, 255, 0.7);
+    box-shadow: 0 0 10px #00ffff;
     transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.9);
-    padding: 40px;
-    border-radius: 10px;
-    text-align: center;
-    color: white;
+    pointer-events: none;
+}
+
+#touch-buttons {
+    position: absolute;
+    bottom: 25px;
+    right: 25px;
+    display: flex;
+    flex-wrap: wrap;
+    width: 180px;
+    height: 180px;
+    gap: 12px;
+    justify-content: flex-end;
+    align-content: flex-end;
+    pointer-events: auto;
+}
+
+.touch-btn {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(15, 23, 42, 0.85);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 13px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(6px);
+}
+
+.touch-btn:active {
+    transform: scale(0.92);
+}
+
+.drive-btn {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.3);
+}
+
+.brake-btn {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.3);
+}
+
+.drift-btn {
+    border-color: #f59e0b;
+}
+
+.enter-btn {
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.3);
+}
+
+.horn-btn {
+    border-color: #a855f7;
+}
+
+/* --- Modal Styles --- */
+.modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 100;
 }
 
-#menu h1, #pause-menu h1 {
-    margin-bottom: 30px;
+.modal.hidden {
+    display: none;
 }
 
-#menu button, #pause-menu button {
-    display: block;
-    width: 200px;
-    margin: 10px auto;
-    padding: 12px;
-    background: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
+.modal-content {
+    background: #0f172a;
+    border: 2px solid #00ffff;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 520px;
+    width: 90%;
+    color: #ffffff;
 }
 
-#menu button:hover, #pause-menu button:hover {
-    background: #45a049;
+.modal-content h2 {
+    font-size: 22px;
+    margin-bottom: 20px;
+    color: #00ffff;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+    padding-bottom: 10px;
 }
 
-#vehicle-hud {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: white;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 10px 20px;
-    border-radius: 5px;
+.controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+    font-size: 14px;
+    margin-bottom: 25px;
 }
 
-.hidden {
-    display: none !important;
+kbd {
+    background: #1e293b;
+    border: 1px solid #475569;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: #38bdf8;
 }
 
-#minimap {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 200px;
-    height: 200px;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 5px;
-}
-
-#minimap canvas {
+.modal-close-btn {
     width: 100%;
-    height: 100%;
+    padding: 10px;
+    background: #00ffff;
+    color: #0b0e14;
+    font-weight: 800;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.modal-close-btn:hover {
+    background: #38bdf8;
 }

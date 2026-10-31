@@ -1,38 +1,130 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GTA Web Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Taipei GTA - 台北極速 Rush Edition</title>
+    <meta name="description" content="3D Web-based Taipei GTA inspired by Taipei Rush. Explore Taipei 101, drive Taiwan scooters, yellow taxis, and blue trucks.">
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700;800&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="game-container">
+        <!-- 3D WebGL Canvas -->
         <canvas id="game-canvas"></canvas>
-        <div id="hud">
-            <div id="money">$<span id="money-amount">0</span></div>
-            <div id="wanted-level">Wanted: <span id="wanted-stars">0</span></div>
-            <div id="health">Health: <span id="health-bar"></span></div>
-            <div id="weapon">Weapon: <span id="weapon-name">Fists</span></div>
-            <div id="mission">Mission: <span id="mission-text">Free Roam</span></div>
+
+        <!-- Top Left Info: District & City Status -->
+        <div id="top-left-hud">
+            <div class="district-badge">
+                <span class="pulse-dot"></span>
+                <span id="district-name">信義區 Xinyi (Taipei 101)</span>
+            </div>
+            <div class="quick-toolbar">
+                <button id="btn-time" class="hud-btn" title="Toggle Day/Night Cycle (T)">☀️/🌙</button>
+                <button id="btn-camera" class="hud-btn" title="Switch Camera View (C)">📷</button>
+                <button id="btn-radio" class="hud-btn" title="Radio Stations (R)">📻</button>
+                <button id="btn-help" class="hud-btn" title="Controls / Help (?)">❓</button>
+            </div>
         </div>
-        <div id="menu" class="hidden">
-            <h1>GTA Web Edition</h1>
-            <button id="start-game">Start Game</button>
-            <button id="load-game">Load Game</button>
-            <button id="settings">Settings</button>
+
+        <!-- Top Right Info: Wanted Level, Cash, Health -->
+        <div id="top-right-hud">
+            <div id="wanted-box">
+                <span id="wanted-stars">☆☆☆☆☆</span>
+            </div>
+            <div id="cash-box">
+                <span class="currency">NT$</span> <span id="cash-amount">25,800</span>
+            </div>
+            <div class="bars-container">
+                <div class="stat-bar-wrap health">
+                    <div class="bar-fill" id="health-bar" style="width: 100%;"></div>
+                </div>
+                <div class="stat-bar-wrap armor">
+                    <div class="bar-fill" id="armor-bar" style="width: 85%;"></div>
+                </div>
+            </div>
         </div>
-        <div id="pause-menu" class="hidden">
-            <h1>Paused</h1>
-            <button id="resume">Resume</button>
-            <button id="save-game">Save Game</button>
-            <button id="quit">Quit to Menu</button>
+
+        <!-- Center Notification Banner -->
+        <div id="notification-banner" class="notification-banner"></div>
+
+        <!-- Bottom Left: Minimap Radar GPS -->
+        <div id="minimap-container">
+            <div class="minimap-ring">
+                <canvas id="minimap-canvas" width="160" height="160"></canvas>
+                <div class="compass-n">N</div>
+            </div>
         </div>
+
+        <!-- Bottom Right: Vehicle Speedometer HUD -->
         <div id="vehicle-hud" class="hidden">
-            <div>Vehicle: <span id="vehicle-name">Unknown</span></div>
-            <div>Speed: <span id="vehicle-speed">0</span> km/h</div>
+            <div class="speed-gauge">
+                <div class="speed-number" id="vehicle-speed">0</div>
+                <div class="speed-unit">KM/H</div>
+            </div>
+            <div class="vehicle-info">
+                <span id="vehicle-name">SCOOTER</span>
+            </div>
+        </div>
+
+        <!-- Mobile Touch Controls -->
+        <div id="touch-controls">
+            <!-- Left: Virtual Joystick -->
+            <div id="virtual-joystick">
+                <div id="joystick-knob"></div>
+            </div>
+
+            <!-- Right: Action Buttons -->
+            <div id="touch-buttons">
+                <button id="touch-drive" class="touch-btn drive-btn">GO</button>
+                <button id="touch-brake" class="touch-btn brake-btn">STOP</button>
+                <button id="touch-drift" class="touch-btn drift-btn">DRIFT</button>
+                <button id="touch-enter" class="touch-btn enter-btn">VEHICLE</button>
+                <button id="touch-horn" class="touch-btn horn-btn">HORN</button>
+            </div>
+        </div>
+
+        <!-- Help / Controls Modal -->
+        <div id="help-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>🇹🇼 Taipei GTA - 操作指南 Controls</h2>
+                <div class="controls-grid">
+                    <div><kbd>W / A / S / D</kbd> 或 <kbd>↑ / ← / ↓ / →</kbd></div><div>前進 / 轉向 / 倒車 (Move / Steer)</div>
+                    <div><kbd>Shift</kbd></div><div>步行衝刺 (Sprint On Foot)</div>
+                    <div><kbd>Space 空白鍵</kbd></div><div>手煞車甩尾 (Handbrake Drift)</div>
+                    <div><kbd>F</kbd> 或 <kbd>Enter</kbd></div><div>上車 / 下車 (Mount / Exit Scooter or Car)</div>
+                    <div><kbd>H</kbd></div><div>喇叭 (Horn / Scooter Beep)</div>
+                    <div><kbd>R</kbd></div><div>切換電台 (Switch Radio Station)</div>
+                    <div><kbd>C</kbd></div><div>切換視角 (Switch Camera Mode)</div>
+                    <div><kbd>T</kbd></div><div>切換日夜 (Toggle Day / Sunset / Neon Night)</div>
+                </div>
+                <button id="close-help-btn" class="modal-close-btn">關閉 Close</button>
+            </div>
         </div>
     </div>
+
+    <!-- Scripts -->
+    <script src="three.min.js"></script>
+    <script src="audio.js"></script>
+    <script src="world.js"></script>
+    <script src="vehicles.js"></script>
+    <script src="player.js"></script>
+    <script src="traffic.js"></script>
     <script src="game.js"></script>
+
+    <script>
+        // Modal toggling
+        const helpModal = document.getElementById('help-modal');
+        const btnHelp = document.getElementById('btn-help');
+        const closeHelpBtn = document.getElementById('close-help-btn');
+        if (btnHelp && helpModal) {
+            btnHelp.addEventListener('click', () => helpModal.classList.remove('hidden'));
+        }
+        if (closeHelpBtn && helpModal) {
+            closeHelpBtn.addEventListener('click', () => helpModal.classList.add('hidden'));
+        }
+    </script>
 </body>
 </html>
