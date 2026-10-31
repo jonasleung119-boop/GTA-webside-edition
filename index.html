@@ -21,6 +21,11 @@
                 <span class="pulse-dot"></span>
                 <span id="district-name">信義區 Xinyi (Taipei 101)</span>
             </div>
+            <div id="tech-badge" class="tech-badge">
+                <span id="gpu-status">⚡ Initializing WebGPU...</span>
+                <span class="divider">•</span>
+                <span id="wasm-status">⚙️ Initializing WASM...</span>
+            </div>
             <div class="quick-toolbar">
                 <button id="btn-time" class="hud-btn" title="Toggle Day/Night Cycle (T)">☀️/🌙</button>
                 <button id="btn-camera" class="hud-btn" title="Switch Camera View (C)">📷</button>
@@ -106,6 +111,8 @@
     </div>
 
     <!-- Scripts -->
+    <script src="wasm-loader.js"></script>
+    <script src="webgpu-renderer.js"></script>
     <script src="three.min.js"></script>
     <script src="audio.js"></script>
     <script src="world.js"></script>

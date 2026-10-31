@@ -43,6 +43,13 @@ class Game {
             action: false
         };
 
+        // Engine Architecture State (WebGPU + WebAssembly Core)
+        this.webgpuRenderer = null;
+        this.useWebGPU = false;
+        this.wasmLoaded = false;
+        this.gpuVehicles = [];
+        this.gpuPedestrians = [];
+
         // Minimap Radar
         this.minimapCanvas = document.getElementById('minimap-canvas');
         this.mctx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
@@ -50,7 +57,19 @@ class Game {
         this.init();
     }
 
-    init() {
+    async init() {
+        // 1. Initialize WebAssembly Simulation Engine (C++/Rust binary)
+        if (window.wasmEngine) {
+            this.wasmLoaded = await window.wasmEngine.init();
+        }
+
+        // 2. Initialize Native WebGPU 3D Engine
+        if (window.WebGPURenderer) {
+            this.webgpuRenderer = new WebGPURenderer(this.canvas);
+            this.useWebGPU = await this.webgpuRenderer.init();
+        }
+
+        // 3. Setup Three.js scene (full simulation & WebGL fallback)
         this.setupThree();
         this.setupLighting();
         
@@ -75,12 +94,70 @@ class Game {
         this.traffic.vehicles.push(starterScooter, starterTaxi, starterSports);
         this.traffic.init(this.player);
 
+        this.initGPUState();
         this.setupEvents();
         this.setupTouchControls();
         this.applyTimeOfDay();
+        this.updateTechStatusHUD();
 
         // Start render loop
         this.animate();
+    }
+
+    initGPUState() {
+        this.syncGPUState();
+    }
+
+    syncGPUState() {
+        const typeMap = { 'scooter': 0, 'taxi': 1, 'truck': 2, 'police': 3, 'sports': 4 };
+        this.gpuVehicles = this.traffic.vehicles.map((v, idx) => ({
+            id: idx,
+            active: true,
+            type: typeMap[v.type] !== undefined ? typeMap[v.type] : 0,
+            x: v.x,
+            y: v.y || 0,
+            z: v.z,
+            heading: v.heading,
+            speed: v.speed,
+            steerAngle: v.steerAngle || 0,
+            leanAngle: v.leanAngle || 0,
+            isPlayer: v === this.player.currentVehicle,
+            isDrifting: !!v.isDrifting,
+            health: v.health || 100
+        }));
+
+        this.gpuPedestrians = this.traffic.pedestrians.map((p, idx) => ({
+            id: idx,
+            active: true,
+            x: p.x,
+            z: p.z,
+            heading: p.heading,
+            speed: p.speed,
+            animTime: p.animTime || 0
+        }));
+    }
+
+    updateTechStatusHUD() {
+        const gpuStatus = document.getElementById('gpu-status');
+        const wasmStatus = document.getElementById('wasm-status');
+        if (gpuStatus) {
+            if (this.useWebGPU) {
+                gpuStatus.innerText = '⚡ WebGPU Active';
+                gpuStatus.style.color = '#00ffcc';
+            } else {
+                gpuStatus.innerText = '🌐 WebGL Fallback';
+                gpuStatus.style.color = '#f59e0b';
+            }
+        }
+        if (wasmStatus) {
+            if (this.wasmLoaded) {
+                wasmStatus.innerText = '🦀 C++/Rust WASM SIMD';
+                wasmStatus.style.color = '#38bdf8';
+            } else {
+                wasmStatus.innerText = 'JS Mode';
+                wasmStatus.style.color = '#a855f7';
+            }
+        }
     }
 
     setupThree() {
@@ -338,6 +415,9 @@ class Game {
     }
 
     toggleVehicleEntry() {
+        if (window.wasmEngine && this.wasmLoaded) {
+            window.wasmEngine.toggleVehicle();
+        }
         const res = this.player.tryEnterVehicle(this.traffic.vehicles);
         if (res.action === 'enter') {
             this.showNotification(`Mounted: ${res.vehicle.type.toUpperCase()}`);
@@ -508,7 +588,12 @@ class Game {
         requestAnimationFrame(() => this.animate());
         const dt = Math.min(this.clock.getDelta(), 0.1);
 
-        // Update Player or Vehicle
+        // 1. Step WebAssembly Simulation Engine (C++/Rust compiled Wasm)
+        if (this.wasmLoaded && window.wasmEngine) {
+            window.wasmEngine.update(dt, this.input);
+        }
+
+        // 2. Update Player or Vehicle
         if (this.player.inVehicle && this.player.currentVehicle) {
             this.player.currentVehicle.update(dt, this.input, this.world);
             this.player.x = this.player.currentVehicle.x;
@@ -518,31 +603,45 @@ class Game {
             this.player.update(dt, this.input, this.world, this.cameraAngle.yaw);
         }
 
-        // Update Traffic & AI
+        // 3. Update Traffic & AI
         this.traffic.update(dt, this.player, this.player.wantedLevel);
 
-        // Check Vehicle-Vehicle Player Collisions
+        // 4. Check Vehicle-Vehicle Player Collisions
         if (this.player.inVehicle && this.player.currentVehicle) {
             this.traffic.vehicles.forEach(other => {
                 if (other === this.player.currentVehicle) return;
                 const d = Math.hypot(other.x - this.player.currentVehicle.x, other.z - this.player.currentVehicle.z);
                 if (d < 3.2 && Math.abs(this.player.currentVehicle.speed) > 18) {
-                    // Ramming crime raises wanted level!
                     if (Date.now() - this.lastWantedCrimeTime > 5000) {
                         this.player.wantedLevel = Math.min(5, this.player.wantedLevel + 1);
                         this.lastWantedCrimeTime = Date.now();
                         this.showNotification(`WANTED LEVEL INCREASED: ${this.player.wantedLevel} STAR(S)!`);
+                        if (this.wasmLoaded && window.wasmEngine) {
+                            window.wasmEngine.addWanted(1);
+                        }
                     }
                 }
             });
         }
 
-        // Update Camera & Visuals
+        // 5. Update Camera, Minimap & HUD
         this.updateCamera(dt);
         this.renderMinimap();
         this.updateHUD();
 
-        this.renderer.render(this.scene, this.camera);
+        // 6. 3D Render Pass: WebGPU Native Engine OR WebGL Fallback
+        if (this.useWebGPU && this.webgpuRenderer) {
+            this.syncGPUState();
+            const camTarget = { x: this.player.x, y: 1.5, z: this.player.z };
+            const camPos = {
+                x: this.camera.position.x,
+                y: this.camera.position.y,
+                z: this.camera.position.z
+            };
+            this.webgpuRenderer.render({ position: camPos, target: camTarget }, this.player, this.gpuVehicles, this.gpuPedestrians, this.timeOfDay);
+        } else {
+            this.renderer.render(this.scene, this.camera);
+        }
     }
 }
 

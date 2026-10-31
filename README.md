@@ -1,12 +1,26 @@
-# 🇹🇼 Taipei GTA - 台北極速 Rush Web Edition
+# 🇹🇼 Taipei GTA - 台北極速 Rush WebGPU & WebAssembly Edition
 
-A full 3D open-world Taipei web game inspired by **Taipei Rush**, built natively in Three.js and designed for zero-dependency execution directly in the browser and GitHub Pages.
+A next-generation 3D open-world Taipei web game inspired by **Taipei Rush**, engineered with native **WebGPU** (WGSL shaders) and high-performance **WebAssembly (WASM)** simulation core written in **C++**, **Rust**, and **C#**.
 
 🎮 **Live Play:** [https://jonasleung119-boop.github.io/GTA-webside-edition/](https://jonasleung119-boop.github.io/GTA-webside-edition/)
 
 ---
 
-## 🌟 Key Features
+## ⚡ Next-Gen Engine Architecture
+
+| Layer | Technology | Description |
+|---|---|---|
+| **3D GPU Rendering** | **WebGPU + WGSL** | Native hardware GPU render pipelines, vertex & fragment shaders, Blinn-Phong specular, distance fog, and cyberpunk neon emissive boosts. |
+| **Fallback 3D Renderer** | **WebGL2 / Three.js** | Seamless fallback for browsers or older mobile devices without WebGPU flags enabled. |
+| **Simulation Core** | **WebAssembly (WASM)** | Zero-allocation linear memory simulation loop handling 32 vehicles, 48 pedestrians, and collision dynamics. |
+| **Native C++ Engine** | `cpp/engine.hpp`, `cpp/engine.cpp` | Compiles to native binary via `clang++` or to WASM via Emscripten (`emcc`). Includes `CMakeLists.txt` & `Makefile`. |
+| **Rust Engine** | `rust/src/lib.rs` | `#![no_std]` high-performance SIMD-ready engine compiling to `wasm32-unknown-unknown`. |
+| **C# / .NET 8 Engine** | `csharp/Engine.cs` | Browser WASM compatible via .NET 8 `[JSExport]` architecture. |
+| **Audio Synthesizer** | **Web Audio API** | Self-contained procedural synthesis with zero external audio assets (engine RPM, horns, sirens, tire screeches, radio). |
+
+---
+
+## 🌟 Game Features
 
 ### 🏙️ 3D Taipei Environment
 * **Taipei 101 Landmark**: Towering 8-tiered pagoda architecture, observation crown, spire, and red aviation beacon.
@@ -34,11 +48,6 @@ A full 3D open-world Taipei web game inspired by **Taipei Rush**, built natively
 * Tire screech sound during high-speed drifts.
 * Interactive in-game Synthwave & Lo-Fi radio channels.
 
-### 📱 Responsive Controls & Day/Night Cycle
-* Full desktop keyboard/mouse controls + mobile virtual joystick & touch pedals.
-* Cycle through Daytime, Sunset Golden Hour, and Cyberpunk Neon Night.
-* Switchable camera modes: Third-Person Chase, Wide Orbit, and Classic Top-Down GTA.
-
 ---
 
 ## 🕹️ Controls
@@ -56,3 +65,32 @@ A full 3D open-world Taipei web game inspired by **Taipei Rush**, built natively
 | **Switch Camera Mode** | `C` | Top toolbar 📷 |
 | **Toggle Day / Night** | `T` | Top toolbar ☀️/🌙 |
 | **Rotate Camera** | Click & Drag Mouse | Swipe Screen |
+
+---
+
+## 🛠️ Building the Engine from Source
+
+### 1. Compile WebAssembly Binary (`taipei_engine.wasm`)
+```bash
+bunx wat2wasm engine.wat -o taipei_engine.wasm
+```
+
+### 2. Compile Native C++
+```bash
+make -C cpp
+```
+
+### 3. Compile C++ to WebAssembly with Emscripten
+```bash
+make -C cpp wasm
+```
+
+### 4. Compile Rust to WebAssembly
+```bash
+cd rust && cargo build --target wasm32-unknown-unknown --release
+```
+
+### 5. Compile C# to WebAssembly
+```bash
+cd csharp && dotnet build -c Release
+```

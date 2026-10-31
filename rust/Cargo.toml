@@ -1,0 +1,22 @@
+[package]
+name = "taipei-gta-engine"
+version = "1.0.0"
+edition = "2021"
+authors = ["Taipei GTA Team"]
+description = "High-performance Taipei GTA WebAssembly simulation engine in Rust"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = { version = "0.2", optional = true }
+
+[features]
+default = []
+wasm = ["wasm-bindgen"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
