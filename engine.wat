@@ -253,7 +253,18 @@
     (local.set $act (i32.and (local.get $input) (i32.const 64)))
 
     (if (local.get $act)
-      (then (call $engine_toggle_vehicle)))
+      (then
+        (if (i32.eqz (i32.load (i32.const 3004)))
+          (then
+            (call $engine_toggle_vehicle)
+            (i32.store (i32.const 3004) (i32.const 1))
+          )
+        )
+      )
+      (else
+        (i32.store (i32.const 3004) (i32.const 0))
+      )
+    )
 
     (local.set $in_v (i32.load (i32.const 32)))
     (if (local.get $in_v)

@@ -139,6 +139,7 @@ private:
     VehicleState vehicles[MAX_VEHICLES];
     PedestrianState pedestrians[MAX_PEDESTRIANS];
     uint32_t rngSeed;
+    bool prevAction;
 
     float randomFloat(float min, float max);
     VehicleSpecs getSpecs(int32_t type) const;

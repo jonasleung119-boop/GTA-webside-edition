@@ -5,7 +5,7 @@ namespace TaipeiGTA {
 
 static Engine g_engine;
 
-Engine::Engine() : rngSeed(1337) {}
+Engine::Engine() : rngSeed(1337), prevAction(false) {}
 
 float Engine::randomFloat(float min, float max) {
     // Fast LCG pseudorandom number generator for deterministic WASM execution
@@ -104,9 +104,10 @@ void Engine::update(float dt, uint32_t inputMask, int32_t playerInVehicleReq) {
     input.handbrake = (inputMask & (1 << 5)) != 0;
     input.action    = (inputMask & (1 << 6)) != 0;
 
-    if (input.action) {
+    if (input.action && !prevAction) {
         triggerMountDismount();
     }
+    prevAction = input.action;
 
     updatePlayer(dt, input);
     updateVehicles(dt, input);

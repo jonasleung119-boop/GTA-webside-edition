@@ -58,6 +58,13 @@ class Game {
     }
 
     async init() {
+        // Set canvas resolution to match window and device pixel ratio immediately
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.canvas.width = Math.floor(this.width * dpr);
+        this.canvas.height = Math.floor(this.height * dpr);
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
+
         // 1. Initialize WebAssembly Simulation Engine (C++/Rust binary)
         if (window.wasmEngine) {
             this.wasmLoaded = await window.wasmEngine.init();
@@ -167,15 +174,22 @@ class Game {
         this.camera = new THREE.PerspectiveCamera(60, this.width / this.height, 0.5, 1500);
         this.camera.position.set(0, 15, 30);
 
-        this.renderer = new THREE.WebGLRenderer({
-            canvas: this.canvas,
-            antialias: true,
-            powerPreference: 'high-performance'
-        });
-        this.renderer.setSize(this.width, this.height);
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Only create WebGLRenderer on this.canvas if WebGPU is NOT active to prevent context clash!
+        if (!this.useWebGPU) {
+            try {
+                this.renderer = new THREE.WebGLRenderer({
+                    canvas: this.canvas,
+                    antialias: true,
+                    powerPreference: 'high-performance'
+                });
+                this.renderer.setSize(this.width, this.height);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            } catch (err) {
+                console.warn('[WebGL Fallback] WebGL context could not be created:', err);
+            }
+        }
     }
 
     setupLighting() {
@@ -236,7 +250,19 @@ class Game {
             this.height = window.innerHeight;
             this.camera.aspect = this.width / this.height;
             this.camera.updateProjectionMatrix();
-            this.renderer.setSize(this.width, this.height);
+
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            this.canvas.width = Math.floor(this.width * dpr);
+            this.canvas.height = Math.floor(this.height * dpr);
+            this.canvas.style.width = `${this.width}px`;
+            this.canvas.style.height = `${this.height}px`;
+
+            if (this.renderer) {
+                this.renderer.setSize(this.width, this.height);
+            }
+            if (this.useWebGPU && this.webgpuRenderer) {
+                this.webgpuRenderer.resize(this.canvas.width, this.canvas.height);
+            }
         });
 
         // Keyboard Controls
@@ -591,16 +617,33 @@ class Game {
         // 1. Step WebAssembly Simulation Engine (C++/Rust compiled Wasm)
         if (this.wasmLoaded && window.wasmEngine) {
             window.wasmEngine.update(dt, this.input);
-        }
 
-        // 2. Update Player or Vehicle
-        if (this.player.inVehicle && this.player.currentVehicle) {
-            this.player.currentVehicle.update(dt, this.input, this.world);
-            this.player.x = this.player.currentVehicle.x;
-            this.player.z = this.player.currentVehicle.z;
-            this.player.heading = this.player.currentVehicle.heading;
+            // Synchronize simulation state from WASM engine
+            const wasmPlayer = window.wasmEngine.getPlayer();
+            if (wasmPlayer) {
+                if (this.player.inVehicle && this.player.currentVehicle) {
+                    this.player.currentVehicle.update(dt, this.input, this.world);
+                    this.player.x = this.player.currentVehicle.x;
+                    this.player.z = this.player.currentVehicle.z;
+                    this.player.heading = this.player.currentVehicle.heading;
+                    window.wasmEngine.setPlayerPos(this.player.x, this.player.z);
+                } else {
+                    this.player.update(dt, this.input, this.world, this.cameraAngle.yaw);
+                    window.wasmEngine.setPlayerPos(this.player.x, this.player.z);
+                }
+                this.player.money = wasmPlayer.cash;
+                this.player.wantedLevel = wasmPlayer.wanted;
+            }
         } else {
-            this.player.update(dt, this.input, this.world, this.cameraAngle.yaw);
+            // 2. Update Player or Vehicle
+            if (this.player.inVehicle && this.player.currentVehicle) {
+                this.player.currentVehicle.update(dt, this.input, this.world);
+                this.player.x = this.player.currentVehicle.x;
+                this.player.z = this.player.currentVehicle.z;
+                this.player.heading = this.player.currentVehicle.heading;
+            } else {
+                this.player.update(dt, this.input, this.world, this.cameraAngle.yaw);
+            }
         }
 
         // 3. Update Traffic & AI
@@ -639,7 +682,7 @@ class Game {
                 z: this.camera.position.z
             };
             this.webgpuRenderer.render({ position: camPos, target: camTarget }, this.player, this.gpuVehicles, this.gpuPedestrians, this.timeOfDay);
-        } else {
+        } else if (this.renderer) {
             this.renderer.render(this.scene, this.camera);
         }
     }

@@ -212,6 +212,11 @@ class WebGPURenderer {
         });
     }
 
+    resize(width, height) {
+        if (!this.device || !this.canvas) return;
+        this.createDepthTexture();
+    }
+
     createDynamicBuffer() {
         this.dynamicVertexBuffer = this.device.createBuffer({
             size: this.dynamicMaxVertices * 40,
@@ -556,16 +561,27 @@ class WebGPURenderer {
             const y0 = cy - hy;
             const y1 = cy + hy;
 
-            // Top
+            // Top (+Y)
             addQuad([p00[0], y1, p00[1]], [p01[0], y1, p01[1]], [p11[0], y1, p11[1]], [p10[0], y1, p10[1]], [0, 1, 0], col);
+            // Bottom (-Y)
+            addQuad([p00[0], y0, p00[1]], [p10[0], y0, p10[1]], [p11[0], y0, p11[1]], [p01[0], y0, p01[1]], [0, -1, 0], col);
             // Front (+Z local)
-            addQuad([p01[0], y0, p01[1]], [p11[0], y0, p11[1]], [p11[0], y1, p11[1]], [p01[0], y1, p01[1]], [sin, 0, cos], col);
+            addQuad([p01[0], y0, p01[1]], [p11[0], y0, p11[1]], [p11[0], y1, p11[1]], [p01[0], y1, p01[1]], [-sin, 0, cos], col);
             // Back (-Z local)
-            addQuad([p10[0], y0, p10[1]], [p00[0], y0, p00[1]], [p00[0], y1, p00[1]], [p10[0], y1, p10[1]], [-sin, 0, -cos], col);
+            addQuad([p10[0], y0, p10[1]], [p00[0], y0, p00[1]], [p00[0], y1, p00[1]], [p10[0], y1, p10[1]], [sin, 0, -cos], col);
             // Right (+X local)
-            addQuad([p11[0], y0, p11[1]], [p10[0], y0, p10[1]], [p10[0], y1, p10[1]], [p11[0], y1, p11[1]], [cos, 0, -sin], col);
+            addQuad([p11[0], y0, p11[1]], [p10[0], y0, p10[1]], [p10[0], y1, p10[1]], [p11[0], y1, p11[1]], [cos, 0, sin], col);
             // Left (-X local)
-            addQuad([p00[0], y0, p00[1]], [p01[0], y0, p01[1]], [p01[0], y1, p01[1]], [p00[0], y1, p00[1]], [-cos, 0, sin], col);
+            addQuad([p00[0], y0, p00[1]], [p01[0], y0, p01[1]], [p01[0], y1, p01[1]], [p00[0], y1, p00[1]], [-cos, 0, -sin], col);
+        };
+
+        const addVehiclePart = (vx, vy, vz, heading, lx, ly, lz, hx, hy, hz, col) => {
+            const cos = Math.cos(heading);
+            const sin = Math.sin(heading);
+            const cx = vx + lx * cos - lz * sin;
+            const cy = (vy || 0) + ly;
+            const cz = vz + lx * sin + lz * cos;
+            addRotatedBox(cx, cy, cz, hx, hy, hz, heading, col);
         };
 
         // 1. Draw Player Character (if not in vehicle)
@@ -589,55 +605,55 @@ class WebGPURenderer {
 
                 if (v.type === 0) { // Taiwan Scooter (SYM / Kymco style)
                     // Chassis
-                    addRotatedBox(v.x, 0.55, v.z, 0.25, 0.25, 0.75, v.heading, [0.85, 0.15, 0.15, 1.0]); // Sport red
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 0.55, 0, 0.25, 0.25, 0.75, [0.85, 0.15, 0.15, 1.0]);
                     // Seat
-                    addRotatedBox(v.x, 0.75, v.z, 0.22, 0.08, 0.35, v.heading, [0.1, 0.1, 0.1, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 0.75, -0.1, 0.22, 0.08, 0.35, [0.1, 0.1, 0.1, 1.0]);
                     // Front Handlebar
-                    addRotatedBox(v.x, 1.05, v.z + 0.5, 0.35, 0.04, 0.04, v.heading, [0.2, 0.2, 0.2, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.05, 0.5, 0.35, 0.04, 0.04, [0.2, 0.2, 0.2, 1.0]);
                     // Scooter Headlight (Warm yellow glow)
-                    addRotatedBox(v.x, 0.85, v.z + 0.65, 0.12, 0.08, 0.05, v.heading, [1.0, 0.95, 0.6, 2.2]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 0.85, 0.65, 0.12, 0.08, 0.05, [1.0, 0.95, 0.6, 2.2]);
                     // Taillight (Red glow)
-                    addRotatedBox(v.x, 0.65, v.z - 0.7, 0.12, 0.06, 0.05, v.heading, [1.0, 0.1, 0.1, 2.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 0.65, -0.7, 0.12, 0.06, 0.05, [1.0, 0.1, 0.1, 2.0]);
                     // Rider (if player is on scooter)
                     if (v.isPlayer) {
-                        addRotatedBox(v.x, 1.35, v.z, 0.25, 0.35, 0.2, v.heading, [0.2, 0.3, 0.4, 1.0]);
-                        addRotatedBox(v.x, 1.85, v.z, 0.18, 0.18, 0.18, v.heading, [0.96, 0.8, 0.65, 1.0]);
+                        addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.35, 0, 0.25, 0.35, 0.2, [0.2, 0.3, 0.4, 1.0]);
+                        addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.85, 0, 0.18, 0.18, 0.18, [0.96, 0.8, 0.65, 1.0]);
                     }
                 } else if (v.type === 1) { // Taipei Yellow Taxi
                     // Yellow Main Body
-                    addRotatedBox(v.x, 0.75, v.z, 0.95, 0.45, 2.2, v.heading, [0.96, 0.76, 0.06, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 0.75, 0, 0.95, 0.45, 2.2, [0.96, 0.76, 0.06, 1.0]);
                     // Cabin / Roof
-                    addRotatedBox(v.x, 1.35, v.z - 0.1, 0.85, 0.35, 1.2, v.heading, [0.15, 0.15, 0.18, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.35, -0.1, 0.85, 0.35, 1.2, [0.15, 0.15, 0.18, 1.0]);
                     // TAXI Roof Dome Sign (Glowing Amber)
-                    addRotatedBox(v.x, 1.82, v.z, 0.28, 0.12, 0.15, v.heading, [1.0, 0.75, 0.05, 2.2]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.82, 0, 0.28, 0.12, 0.15, [1.0, 0.75, 0.05, 2.2]);
                     // Headlights
-                    addRotatedBox(v.x + 0.6, 0.65, v.z + 2.15, 0.18, 0.12, 0.08, v.heading, [1.0, 1.0, 0.85, 2.5]);
-                    addRotatedBox(v.x - 0.6, 0.65, v.z + 2.15, 0.18, 0.12, 0.08, v.heading, [1.0, 1.0, 0.85, 2.5]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0.6, 0.65, 2.15, 0.18, 0.12, 0.08, [1.0, 1.0, 0.85, 2.5]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, -0.6, 0.65, 2.15, 0.18, 0.12, 0.08, [1.0, 1.0, 0.85, 2.5]);
                 } else if (v.type === 2) { // Taiwan Blue Truck (中華菱利 CMC Veryca)
                     // Blue Cabin
-                    addRotatedBox(v.x, 1.25, v.z + 1.1, 1.05, 0.75, 1.0, v.heading, [0.10, 0.42, 0.75, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.25, 1.1, 1.05, 0.75, 1.0, [0.10, 0.42, 0.75, 1.0]);
                     // White Roof
-                    addRotatedBox(v.x, 2.05, v.z + 1.1, 1.08, 0.08, 1.02, v.heading, [0.95, 0.95, 0.95, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 2.05, 1.1, 1.08, 0.08, 1.02, [0.95, 0.95, 0.95, 1.0]);
                     // Rear Open Flatbed Cargo
-                    addRotatedBox(v.x, 0.65, v.z - 1.2, 1.05, 0.35, 1.5, v.heading, [0.30, 0.32, 0.35, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 0.65, -1.2, 1.05, 0.35, 1.5, [0.30, 0.32, 0.35, 1.0]);
                     // Wooden Cargo Crates
-                    addRotatedBox(v.x, 1.35, v.z - 1.0, 0.75, 0.45, 0.85, v.heading, [0.65, 0.45, 0.25, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.35, -1.0, 0.75, 0.45, 0.85, [0.65, 0.45, 0.25, 1.0]);
                 } else if (v.type === 3) { // Police Cruiser
                     // Black & White Chassis
-                    addRotatedBox(v.x, 0.75, v.z, 0.95, 0.45, 2.3, v.heading, [0.95, 0.95, 0.95, 1.0]);
-                    addRotatedBox(v.x, 1.35, v.z - 0.1, 0.85, 0.35, 1.25, v.heading, [0.10, 0.10, 0.12, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 0.75, 0, 0.95, 0.45, 2.3, [0.95, 0.95, 0.95, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.35, -0.1, 0.85, 0.35, 1.25, [0.10, 0.10, 0.12, 1.0]);
                     // Police Emergency Flashing Lightbar
                     const leftCol = strobePhase === 0 ? [1.0, 0.05, 0.05, 3.0] : [0.1, 0.1, 0.1, 1.0];
                     const rightCol = strobePhase === 1 ? [0.05, 0.4, 1.0, 3.0] : [0.1, 0.1, 0.1, 1.0];
-                    addRotatedBox(v.x - 0.3, 1.82, v.z, 0.25, 0.12, 0.12, v.heading, leftCol);
-                    addRotatedBox(v.x + 0.3, 1.82, v.z, 0.25, 0.12, 0.12, v.heading, rightCol);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, -0.3, 1.82, 0, 0.25, 0.12, 0.12, leftCol);
+                    addVehiclePart(v.x, v.y, v.z, v.heading,  0.3, 1.82, 0, 0.25, 0.12, 0.12, rightCol);
                 } else { // Sports Car
                     // Sleek Metallic Chassis
-                    addRotatedBox(v.x, 0.60, v.z, 1.0, 0.35, 2.2, v.heading, [0.12, 0.75, 0.35, 1.0]); // Acid green
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 0.60, 0, 1.0, 0.35, 2.2, [0.12, 0.75, 0.35, 1.0]);
                     // Cockpit Canopy
-                    addRotatedBox(v.x, 1.05, v.z - 0.2, 0.75, 0.25, 1.0, v.heading, [0.1, 0.1, 0.1, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.05, -0.2, 0.75, 0.25, 1.0, [0.1, 0.1, 0.1, 1.0]);
                     // Rear Spoiler Wing
-                    addRotatedBox(v.x, 1.15, v.z - 2.0, 0.95, 0.06, 0.25, v.heading, [0.1, 0.1, 0.1, 1.0]);
+                    addVehiclePart(v.x, v.y, v.z, v.heading, 0, 1.15, -2.0, 0.95, 0.06, 0.25, [0.1, 0.1, 0.1, 1.0]);
                 }
             }
         }
@@ -680,9 +696,9 @@ class WebGPURenderer {
         const nf = 1 / (near - far);
         out[0] = f / aspect;
         out[5] = f;
-        out[10] = (far + near) * nf;
+        out[10] = far * nf;
         out[11] = -1;
-        out[14] = (2 * far * near) * nf;
+        out[14] = far * near * nf;
         return out;
     }
 

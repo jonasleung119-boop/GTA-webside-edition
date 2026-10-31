@@ -74,6 +74,7 @@ pub struct Engine {
     pub vehicles: [VehicleState; MAX_VEHICLES],
     pub pedestrians: [PedestrianState; MAX_PEDESTRIANS],
     pub rng_seed: u32,
+    pub prev_action: bool,
 }
 
 impl Engine {
@@ -122,6 +123,7 @@ impl Engine {
             vehicles: [DEFAULT_VEHICLE; MAX_VEHICLES],
             pedestrians: [DEFAULT_PEDESTRIAN; MAX_PEDESTRIANS],
             rng_seed: 1337,
+            prev_action: false,
         }
     }
 
@@ -206,9 +208,10 @@ impl Engine {
         let handbrake = (input_mask & (1 << 5)) != 0;
         let action    = (input_mask & (1 << 6)) != 0;
 
-        if action {
+        if action && !self.prev_action {
             self.toggle_mount();
         }
+        self.prev_action = action;
 
         if self.player.in_vehicle != 0 {
             let vid = self.player.vehicle_id as usize;

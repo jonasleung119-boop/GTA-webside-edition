@@ -71,6 +71,7 @@ namespace TaipeiGTA
         private static VehicleState[] _vehicles = new VehicleState[MaxVehicles];
         private static PedestrianState[] _pedestrians = new PedestrianState[MaxPedestrians];
         private static uint _rngSeed = 1337;
+        private static bool _prevAction = false;
 
         private static float LcgRand(float min, float max)
         {
@@ -150,10 +151,11 @@ namespace TaipeiGTA
             bool handbrake = (inputMask & (1 << 5)) != 0;
             bool action    = (inputMask & (1 << 6)) != 0;
 
-            if (action)
+            if (action && !_prevAction)
             {
                 ToggleMount();
             }
+            _prevAction = action;
 
             if (_player.InVehicle != 0 && _player.VehicleId >= 0 && _player.VehicleId < MaxVehicles)
             {
